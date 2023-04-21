@@ -18,12 +18,23 @@ import {
     TorusWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { Program, Provider, BN, web3 } from "@project-serum/anchor";
-import { clusterApiUrl, Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { clusterApiUrl, Connection, Keypair, PublicKey, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import {
     getOrCreateAssociatedTokenAccount,
     createTransferCheckedInstruction,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    getAssociatedTokenAddress,
+    getAccount,
+    createAssociatedTokenAccountInstruction,
+    TokenAccountNotFoundError,
+    TokenInvalidAccountOwnerError,
+    TokenInvalidMintError,
+    TokenInvalidOwnerError,
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
+
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
+
 import { FC, ReactNode, useEffect, useMemo, useState } from "react";
 import idl from "./idl.json";
 
@@ -88,6 +99,9 @@ const Content: FC = () => {
     const [metaDatas, setMetaDatas] = useState([]);
 
 
+    const { sendTransaction, publicKey } = useWallet()
+
+
     const baseAccount = Keypair.fromSecretKey(secretKey)
     // const baseAccount = Keypair.generate();
 
@@ -106,10 +120,10 @@ const Content: FC = () => {
         const network = endpoint;
         const connection = new Connection(network, "processed");
         // const provider = new Provider(connection, wallet, {
-        //     preflightCommitment: "processed",
+        //     preflight'processed': "processed",
         // });
 
-        const secretKey = Uint8Array.from([205, 92, 88, 232, 250, 162, 206, 112, 4, 161, 219, 140, 108, 242, 195, 188, 201, 216, 209, 110, 107, 150, 58, 111, 53, 121, 51, 216, 220, 72, 211, 119, 49, 247, 122, 185, 153, 54, 53, 103, 164, 44, 47, 59, 217, 109, 204, 70, 22, 135, 204, 164, 154, 244, 174, 39, 128, 148, 234, 22, 21, 188, 214, 230])
+        const secretKey = Uint8Array.from([122, 150, 179, 214, 52, 254, 5, 110, 31, 241, 131, 47, 84, 17, 206, 208, 41, 119, 82, 117, 54, 164, 98, 40, 222, 162, 178, 156, 148, 67, 198, 95, 34, 222, 18, 210, 123, 45, 227, 57, 92, 190, 30, 141, 89, 209, 103, 212, 238, 10, 255, 111, 240, 186, 33, 105, 31, 37, 85, 211, 101, 57, 139, 113])
 
         const signer = Keypair.fromSecretKey(secretKey)
 
@@ -138,7 +152,6 @@ const Content: FC = () => {
         // // Confirm whether the transaction went through or not
         // await connection.confirmTransaction(signature);
 
-
         const getOrCreateTokenBag = await getOrCreateAssociatedTokenAccount(
             connection,
             signer,
@@ -151,6 +164,60 @@ const Content: FC = () => {
         // console.log("balance 2", balance)
 
         return getOrCreateTokenBag.address;
+    }
+
+    const getOrCreateAssociatedTokenAccountCustom = async (
+        connection: any,
+        payer: any,
+        mint: any,
+        owner: any,
+        sendTransaction: any
+    ) => {
+        const associatedToken = await getAssociatedTokenAddress(
+            mint,
+            owner,
+            false,
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
+        // This is the optimal logic, considering TX fee, client-side computation, RPC roundtrips and guaranteed idempotent.
+        // Sadly we can't do this atomically.
+        let account
+        try {
+            account = await getAccount(connection, associatedToken, 'processed', TOKEN_PROGRAM_ID)
+        } catch (error) {
+            // TokenAccountNotFoundError can be possible if the associated address has already received some lamports,
+            // becoming a system account. Assuming program derived addressing is safe, this is the only case for the
+            // TokenInvalidAccountOwnerError in this code path.
+            if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+                // As this isn't atomic, it's possible others can create associated accounts meanwhile.
+                try {
+                    const transaction = new Transaction().add(
+                        createAssociatedTokenAccountInstruction(
+                            payer,
+                            associatedToken,
+                            owner,
+                            mint,
+                            TOKEN_PROGRAM_ID,
+                            ASSOCIATED_TOKEN_PROGRAM_ID,
+                        ),
+                    )
+                    const signature = await sendTransaction(transaction, connection)
+
+                    await connection.confirmTransaction(signature)
+                } catch (error) {
+                    // Ignore all errors; for now there is no API-compatible way to selectively ignore the expected
+                    // instruction error if the associated account exists already.
+                }
+                // Now this should always succeed
+                account = await getAccount(connection, associatedToken, 'processed', TOKEN_PROGRAM_ID)
+            } else {
+                throw error
+            }
+        }
+        if (!account.mint.equals(mint)) throw new TokenInvalidMintError()
+        if (!account.owner.equals(owner)) throw new TokenInvalidOwnerError()
+        return account
     }
 
     function getProvider() {
@@ -522,16 +589,13 @@ const Content: FC = () => {
         });
 
         try {
-            // var transaction = new web3.Transaction().add(
-            //     createTransferCheckedInstruction(
-            //         await getUserTokenBagAddress(provider.wallet.publicKey), // from
-            //         pcsAddress, // mint
-            //         await getUserTokenBagAddress(new PublicKey(receiverAddress)), // to
-            //         provider.wallet.publicKey, // from's owner
-            //         tokenAmount, // amount
-            //         9 // decimals
-            //     ),
-            // );
+            await getOrCreateAssociatedTokenAccountCustom(
+                connection,
+                provider.wallet.publicKey,
+                pcsAddress,
+                new PublicKey(receiverAddress),
+                sendTransaction,
+            )
 
             var transaction = new web3.Transaction().add(
                 createTransferCheckedInstruction(

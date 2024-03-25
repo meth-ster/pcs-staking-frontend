@@ -93,9 +93,11 @@ const Context: FC<{ children: ReactNode }> = ({ children }) => {
 
 const Content: FC = () => {
     const wallet = useAnchorWallet();
-    const secretKey = Uint8Array.from([122, 150, 179, 214, 52, 254, 5, 110, 31, 241, 131, 47, 84, 17, 206, 208, 41, 119, 82, 117, 54, 164, 98, 40, 222, 162, 178, 156, 148, 67, 198, 95, 34, 222, 18, 210, 123, 45, 227, 57, 92, 190, 30, 141, 89, 209, 103, 212, 238, 10, 255, 111, 240, 186, 33, 105, 31, 37, 85, 211, 101, 57, 139, 113])
+    const secretKey = Uint8Array.from([97, 136, 192, 85, 133, 178, 14, 166, 15, 155, 109, 4, 5, 59, 152, 198, 232, 42, 26, 163, 80, 192, 218, 26, 175, 21, 179, 24, 161, 78, 193, 32, 218, 112, 5, 122, 72, 142, 12, 158, 157, 2, 178, 15, 5, 91, 21, 31, 181, 166, 255, 75, 5, 156, 241, 249, 158, 118, 66, 106, 152, 31, 134, 178])
 
     const [pcsAmount, setPcsAmount] = useState(0);
+    const [blockingAPR, setBlockingAPR] = useState(0);
+    const [flexibleAPR, setFlexibleAPR] = useState(0);
     const [metaDatas, setMetaDatas] = useState([]);
 
 
@@ -104,6 +106,7 @@ const Content: FC = () => {
 
     const baseAccount = Keypair.fromSecretKey(secretKey)
     // const baseAccount = Keypair.generate();
+    console.log("baseAccount", baseAccount.secretKey.toString())
 
     const getProgramPDA = async (): Promise<[PublicKey, number]> => {
         return await PublicKey.findProgramAddress(
@@ -123,7 +126,7 @@ const Content: FC = () => {
         //     preflight'processed': "processed",
         // });
 
-        const secretKey = Uint8Array.from([122, 150, 179, 214, 52, 254, 5, 110, 31, 241, 131, 47, 84, 17, 206, 208, 41, 119, 82, 117, 54, 164, 98, 40, 222, 162, 178, 156, 148, 67, 198, 95, 34, 222, 18, 210, 123, 45, 227, 57, 92, 190, 30, 141, 89, 209, 103, 212, 238, 10, 255, 111, 240, 186, 33, 105, 31, 37, 85, 211, 101, 57, 139, 113])
+        const secretKey = Uint8Array.from([97, 136, 192, 85, 133, 178, 14, 166, 15, 155, 109, 4, 5, 59, 152, 198, 232, 42, 26, 163, 80, 192, 218, 26, 175, 21, 179, 24, 161, 78, 193, 32, 218, 112, 5, 122, 72, 142, 12, 158, 157, 2, 178, 15, 5, 91, 21, 31, 181, 166, 255, 75, 5, 156, 241, 249, 158, 118, 66, 106, 152, 31, 134, 178])
 
         const signer = Keypair.fromSecretKey(secretKey)
 
@@ -254,6 +257,9 @@ const Content: FC = () => {
             const tokenAmount = parseInt((await connection.getTokenAccountBalance(await getUserTokenBagAddress(provider.wallet.publicKey))).value.amount);
 
             console.log('account: ', account);
+            console.log('blockApr: ', account.blockApr.toString());
+            setBlockingAPR(account.blockApr.toString())
+            setFlexibleAPR(account.flexibleApr.toString())
             console.log('stakedLastAmount', account.stakedLastAmount.toString())
             console.log('stakedCount', account.stakedCount.toString())
 
@@ -705,9 +711,14 @@ const Content: FC = () => {
             <div className="Info">
                 <span>PCS Token Balance: {pcsAmount}</span>
             </div>
+            <div className="Info">
+                <span>Blocking APR: {blockingAPR}</span>
+            </div>
+            <div className="Info">
+                <span>Flexible APR: {flexibleAPR}</span>
+            </div>
             <div className="detailView">
                 {metaDatas.map((metadata: MetaData) => {
-
                     return <div className="container">
                         <span className="meta">Stake owner address: {metadata.holder.toString()}</span>
                         <span className="meta">Foundation PCS Amount: {metadata.pcsTokenAmount.toString()}</span>

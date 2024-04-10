@@ -29,7 +29,7 @@ import idl from "./idl.json";
 
 
 const programAddress = new PublicKey(
-    '7ry4KgNYx5sd731MYpZkwH42gRxok5kSE74NXu2M5oEP'
+    'Exuhi9zAafbrAgqJJBu9EMbCdqSYPGNYCQ8Bc5WsinRf'
 );
 
 const pcsAddress = new PublicKey(
@@ -82,7 +82,7 @@ const Context: FC<{ children: ReactNode }> = ({ children }) => {
 
 const Content: FC = () => {
     const wallet = useAnchorWallet();
-    const secretKey = Uint8Array.from([26, 250, 47, 223, 59, 0, 19, 200, 43, 66, 176, 133, 181, 106, 229, 223, 28, 20, 29, 106, 48, 22, 199, 16, 254, 103, 179, 128, 144, 200, 202, 10, 193, 132, 30, 58, 26, 31, 124, 37, 186, 5, 195, 87, 239, 181, 219, 10, 3, 97, 108, 183, 98, 230, 0, 100, 241, 211, 28, 170, 227, 218, 223, 80])
+    const secretKey = Uint8Array.from([122, 150, 179, 214, 52, 254, 5, 110, 31, 241, 131, 47, 84, 17, 206, 208, 41, 119, 82, 117, 54, 164, 98, 40, 222, 162, 178, 156, 148, 67, 198, 95, 34, 222, 18, 210, 123, 45, 227, 57, 92, 190, 30, 141, 89, 209, 103, 212, 238, 10, 255, 111, 240, 186, 33, 105, 31, 37, 85, 211, 101, 57, 139, 113])
 
     const [pcsAmount, setPcsAmount] = useState(0);
     const [metaDatas, setMetaDatas] = useState([]);
@@ -90,7 +90,6 @@ const Content: FC = () => {
 
     const baseAccount = Keypair.fromSecretKey(secretKey)
     // const baseAccount = Keypair.generate();
-
 
     const getProgramPDA = async (): Promise<[PublicKey, number]> => {
         return await PublicKey.findProgramAddress(
@@ -106,9 +105,9 @@ const Content: FC = () => {
         const endpoint = clusterApiUrl(WalletAdapterNetwork.Devnet)
         const network = endpoint;
         const connection = new Connection(network, "processed");
-        const provider = new Provider(connection, wallet, {
-            preflightCommitment: "processed",
-        });
+        // const provider = new Provider(connection, wallet, {
+        //     preflightCommitment: "processed",
+        // });
 
         const secretKey = Uint8Array.from([205, 92, 88, 232, 250, 162, 206, 112, 4, 161, 219, 140, 108, 242, 195, 188, 201, 216, 209, 110, 107, 150, 58, 111, 53, 121, 51, 216, 220, 72, 211, 119, 49, 247, 122, 185, 153, 54, 53, 103, 164, 44, 47, 59, 217, 109, 204, 70, 22, 135, 204, 164, 154, 244, 174, 39, 128, 148, 234, 22, 21, 188, 214, 230])
 
@@ -283,7 +282,7 @@ const Content: FC = () => {
         }
     }
 
-    async function stake() {
+    async function flexiableStake() {
         const provider = getProvider();
         if (!provider) {
             return;
@@ -324,7 +323,7 @@ const Content: FC = () => {
         }
     }
 
-    async function unStake() {
+    async function flexibleUnStake() {
         const provider = getProvider();
         if (!provider) {
             return;
@@ -340,6 +339,86 @@ const Content: FC = () => {
             const result = await program.rpc.unstake(
                 bump,
                 new BN(0),
+                {
+                    accounts: {
+                        tokenProgram: TOKEN_PROGRAM_ID,
+
+                        // **************
+                        // TRANSFER 🐮 TO USERS
+                        // **************
+                        programPcsTokenBag: pda,
+                        userPcsTokenBag: await getUserTokenBagAddress(provider.wallet.publicKey),
+                        pcsMint: pcsAddress,
+                        stakeAccount: baseAccount.publicKey,
+                        withdrawer: provider.wallet.publicKey,
+                    },
+                }
+            );
+
+            console.log('Transaction: ', result)
+        }
+        catch (err) {
+            console.log("Transcation error: ", err);
+        }
+    }
+
+    async function blockStake() {
+        const provider = getProvider();
+        if (!provider) {
+            return;
+        }
+
+        const a = JSON.stringify(idl);
+        const b = JSON.parse(a);
+        const program = new Program(b, idl.metadata.address, provider);
+
+        const [pda, bump] = await getProgramPDA();
+
+        try {
+            const result = await program.rpc.stake(
+                bump,
+                new BN(1_000_000),
+                new BN(1),
+                {
+                    accounts: {
+                        // Solana is lost: where are my spl program friends?
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                        // **************
+                        // TRANSFERING 🐮 FROM USERS
+                        // **************
+                        userPcsTokenBag: await getUserTokenBagAddress(provider.wallet.publicKey),
+                        userPcsTokenBagAuthority: provider.wallet.publicKey,
+                        programPcsTokenBag: pda,
+                        pcsMint: pcsAddress,
+                        stakeAccount: baseAccount.publicKey,
+                        depositor: provider.wallet.publicKey,
+                    },
+                },
+            );
+
+            console.log('Transaction: ', result)
+        }
+        catch (err) {
+            console.log("Transcation error: ", err);
+        }
+    }
+
+    async function blockUnStake() {
+        const provider = getProvider();
+        if (!provider) {
+            return;
+        }
+
+        const a = JSON.stringify(idl);
+        const b = JSON.parse(a);
+        const program = new Program(b, idl.metadata.address, provider);
+
+        const [pda, bump] = await getProgramPDA();
+
+        try {
+            const result = await program.rpc.unstake(
+                bump,
+                new BN(1),
                 {
                     accounts: {
                         tokenProgram: TOKEN_PROGRAM_ID,
@@ -432,7 +511,7 @@ const Content: FC = () => {
     }
 
     async function send() {
-        if (!wallet || receiverAddress == "") {
+        if (!wallet || receiverAddress === "") {
             return null;
         }
         const endpoint = clusterApiUrl(WalletAdapterNetwork.Devnet)
@@ -499,12 +578,10 @@ const Content: FC = () => {
                 return;
             }
 
-
-
-            const a = JSON.stringify(idl);
-            const b = JSON.parse(a);
-            const program = new Program(b, idl.metadata.address, provider);
-            const account = await program.account.stakeAccount.fetch(baseAccount.publicKey);
+            // const a = JSON.stringify(idl);
+            // const b = JSON.parse(a);
+            // const program = new Program(b, idl.metadata.address, provider);
+            // const account = await program.account.stakeAccount.fetch(baseAccount.publicKey);
 
             const endpoint = clusterApiUrl(WalletAdapterNetwork.Devnet)
             const network = endpoint;
@@ -516,7 +593,7 @@ const Content: FC = () => {
             setPcsAmount(tokenAmount);
         }
         run()
-
+        // eslint-disable-next-line
     }, [wallet]);
 
     interface MetaData {
@@ -526,20 +603,33 @@ const Content: FC = () => {
         stakeTime: any;
     }
 
-
-
     return (
         <>
             <div className="App">
-                <button onClick={initialization}>Initialize</button>
-                <button onClick={initializationByAccount}>InitializationByAccount</button>
-                <button onClick={stake}>Stake</button>
-                <button onClick={unStake}>UnStake</button>
-                <button onClick={reStake}>ReStake</button>
-                <button onClick={deposit}>Deposit PCS to contract by Admin</button>
-                {/* <button onClick={withdraw}>Withdraw</button> */}
-                <button onClick={get}>Get</button>
-                <WalletMultiButton />
+                <div>
+                    <div className="group">
+                        <button onClick={initialization} className="button">Initialize</button>
+                        <button onClick={initializationByAccount} className="button">InitializationByAccount</button>
+                    </div>
+                    <div className="group">
+                        <button onClick={flexiableStake} className="button">Stake with flexible mode</button>
+                        <button onClick={flexibleUnStake} className="button">UnStake with flexible mode</button>
+                    </div>
+                    <div className="group">
+                        <button onClick={blockStake} className="button">Stake with block mode</button>
+                        <button onClick={blockUnStake} className="button">UnStake with block mode</button>
+                    </div>
+                    <div className="group">
+                        <button onClick={reStake} className="button">ReStake</button>
+                        <button onClick={deposit} className="button">Deposit PCS to contract by Admin</button>
+                    </div>
+                    {/* <button onClick={withdraw}>Withdraw</button> */}
+                    <div className="group">
+                        <button onClick={get} className="button">Get</button>
+                    </div>
+                </div>
+
+                <WalletMultiButton className="connect" />
             </div>
             <div className="token">
                 Receiver: <input type="text" value={receiverAddress} className="inputBox"
@@ -553,10 +643,11 @@ const Content: FC = () => {
             </div>
             <div className="detailView">
                 {metaDatas.map((metadata: MetaData) => {
+
                     return <div className="container">
                         <span className="meta">Stake owner address: {metadata.holder.toString()}</span>
                         <span className="meta">Foundation PCS Amount: {metadata.pcsTokenAmount.toString()}</span>
-                        <span className="meta">StakeMode: {metadata.stakeMode === 0 ? "Flexible" : "Blocking"}</span>
+                        <span className="meta">StakeMode: {metadata.stakeMode.toString() === '0' ? "Flexible" : "Blocking"}</span>
                         <span className="meta">StakeTime: {metadata.stakeTime.toString()}</span>
                     </div>
                 })}

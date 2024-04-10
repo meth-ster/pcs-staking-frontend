@@ -1,7 +1,14 @@
 .App {
+  margin: auto;
+  width: 43rem;
   margin-top: 20vh;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+}
+
+.group {
+  display: flex;
+  justify-content: flex-start;
   align-items: center;
 }
 
@@ -44,4 +51,26 @@
 
 .detailView::-webkit-scrollbar-thumb {
   box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+}
+
+.button {
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-family: "DM Sans", "Roboto", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  height: 40px;
+  line-height: 40px;
+  padding: 0 22px;
+  border-radius: 4px;
+  background: #2b7649;
+  margin: 0.2rem;
+}
+
+.button:hover {
+  background: #7fa18d;
 }

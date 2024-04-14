@@ -17,13 +17,14 @@ import {
     SolletWalletAdapter,
     TorusWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
-import { Program, Provider, BN } from "@project-serum/anchor";
+import { Program, Provider, BN, web3 } from "@project-serum/anchor";
 import { clusterApiUrl, Connection, Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import {
     getOrCreateAssociatedTokenAccount,
+    createTransferCheckedInstruction,
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
-import { FC, ReactNode, useMemo, useState } from "react";
+import { FC, ReactNode, useEffect, useMemo, useState } from "react";
 import idl from "./idl.json";
 
 
@@ -49,7 +50,7 @@ export default App;
 
 const Context: FC<{ children: ReactNode }> = ({ children }) => {
     // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
-    const network = WalletAdapterNetwork.Mainnet;
+    const network = WalletAdapterNetwork.Devnet;
 
     // You can also provide a custom RPC endpoint.
     const endpoint = useMemo(() => clusterApiUrl(network), [network]);
@@ -86,8 +87,10 @@ const Content: FC = () => {
     const [pcsAmount, setPcsAmount] = useState(0);
     const [metaDatas, setMetaDatas] = useState([]);
 
+
     const baseAccount = Keypair.fromSecretKey(secretKey)
     // const baseAccount = Keypair.generate();
+
 
     const getProgramPDA = async (): Promise<[PublicKey, number]> => {
         return await PublicKey.findProgramAddress(
@@ -96,7 +99,7 @@ const Content: FC = () => {
         );
     }
 
-    const getUserTokenBagAddress = async (): Promise<PublicKey> => {
+    const getUserTokenBagAddress = async (pubkey: PublicKey): Promise<PublicKey> => {
         if (!wallet) {
             return new PublicKey('');
         }
@@ -110,9 +113,6 @@ const Content: FC = () => {
         const secretKey = Uint8Array.from([205, 92, 88, 232, 250, 162, 206, 112, 4, 161, 219, 140, 108, 242, 195, 188, 201, 216, 209, 110, 107, 150, 58, 111, 53, 121, 51, 216, 220, 72, 211, 119, 49, 247, 122, 185, 153, 54, 53, 103, 164, 44, 47, 59, 217, 109, 204, 70, 22, 135, 204, 164, 154, 244, 174, 39, 128, 148, 234, 22, 21, 188, 214, 230])
 
         const signer = Keypair.fromSecretKey(secretKey)
-
-        // let balance = await connection.getBalance(signer.publicKey);
-        // console.log("balance 1", balance)
 
         // var transaction = new web3.Transaction().add(
         //     web3.SystemProgram.transfer({
@@ -140,12 +140,11 @@ const Content: FC = () => {
         // await connection.confirmTransaction(signature);
 
 
-
         const getOrCreateTokenBag = await getOrCreateAssociatedTokenAccount(
             connection,
             signer,
             pcsAddress,
-            provider.wallet.publicKey,
+            pubkey,
             false,
         );
 
@@ -186,7 +185,7 @@ const Content: FC = () => {
             const endpoint = clusterApiUrl(WalletAdapterNetwork.Devnet)
             const network = endpoint;
             const connection = new Connection(network, "processed");
-            const tokenAmount = parseInt((await connection.getTokenAccountBalance(await getUserTokenBagAddress())).value.amount);
+            const tokenAmount = parseInt((await connection.getTokenAccountBalance(await getUserTokenBagAddress(provider.wallet.publicKey))).value.amount);
 
             console.log('account: ', account);
             console.log('stakedLastAmount', account.stakedLastAmount.toString())
@@ -308,7 +307,7 @@ const Content: FC = () => {
                         // **************
                         // TRANSFERING 🐮 FROM USERS
                         // **************
-                        userPcsTokenBag: await getUserTokenBagAddress(),
+                        userPcsTokenBag: await getUserTokenBagAddress(provider.wallet.publicKey),
                         userPcsTokenBagAuthority: provider.wallet.publicKey,
                         programPcsTokenBag: pda,
                         pcsMint: pcsAddress,
@@ -349,7 +348,7 @@ const Content: FC = () => {
                         // TRANSFER 🐮 TO USERS
                         // **************
                         programPcsTokenBag: pda,
-                        userPcsTokenBag: await getUserTokenBagAddress(),
+                        userPcsTokenBag: await getUserTokenBagAddress(provider.wallet.publicKey),
                         pcsMint: pcsAddress,
                         stakeAccount: baseAccount.publicKey,
                         withdrawer: provider.wallet.publicKey,
@@ -417,7 +416,7 @@ const Content: FC = () => {
                         // **************
                         // TRANSFERING 🐮 FROM USERS
                         // **************
-                        userPcsTokenBag: await getUserTokenBagAddress(),
+                        userPcsTokenBag: await getUserTokenBagAddress(provider.wallet.publicKey),
                         userPcsTokenBagAuthority: provider.wallet.publicKey,
                         programPcsTokenBag: pda,
                         pcsMint: pcsAddress
@@ -432,12 +431,102 @@ const Content: FC = () => {
         }
     }
 
+    async function send() {
+        if (!wallet || receiverAddress == "") {
+            return null;
+        }
+        const endpoint = clusterApiUrl(WalletAdapterNetwork.Devnet)
+        const network = endpoint;
+        const connection = new Connection(network, "processed");
+        const provider = new Provider(connection, wallet, {
+            preflightCommitment: "processed",
+        });
+
+        try {
+            // var transaction = new web3.Transaction().add(
+            //     createTransferCheckedInstruction(
+            //         await getUserTokenBagAddress(provider.wallet.publicKey), // from
+            //         pcsAddress, // mint
+            //         await getUserTokenBagAddress(new PublicKey(receiverAddress)), // to
+            //         provider.wallet.publicKey, // from's owner
+            //         tokenAmount, // amount
+            //         9 // decimals
+            //     ),
+            // );
+
+            var transaction = new web3.Transaction().add(
+                createTransferCheckedInstruction(
+                    await getUserTokenBagAddress(provider.wallet.publicKey), // from
+                    pcsAddress, // mint
+                    await getUserTokenBagAddress(new PublicKey(receiverAddress)), // to
+                    provider.wallet.publicKey, // from's owner
+                    tokenAmount, // amount
+                    9 // decimals
+                ),
+            );
+
+            // Setting the variables for the transaction
+            transaction.feePayer = await provider.wallet.publicKey;
+            let blockhashObj = await connection.getRecentBlockhash();
+            transaction.recentBlockhash = await blockhashObj.blockhash;
+
+            // Transaction constructor initialized successfully
+            if (transaction) {
+                console.log("Txn created successfully");
+            }
+
+            // Request creator to sign the transaction (allow the transaction)
+            let signed = await provider.wallet.signTransaction(transaction);
+            // The signature is generated
+            let signature = await connection.sendRawTransaction(signed.serialize());
+            // Confirm whether the transaction went through or not
+            const result = await connection.confirmTransaction(signature);
+
+            console.log('Transaction: ', result)
+        }
+        catch (err) {
+            console.log("Transcation error: ", err);
+        }
+    }
+
+    const [receiverAddress, setReceiverAddress] = useState("");
+    const [tokenAmount, setTokenAmount] = useState(0);
+
+    useEffect(() => {
+        const run = async () => {
+            const provider = getProvider();
+            if (!provider) {
+                return;
+            }
+
+
+
+            const a = JSON.stringify(idl);
+            const b = JSON.parse(a);
+            const program = new Program(b, idl.metadata.address, provider);
+            const account = await program.account.stakeAccount.fetch(baseAccount.publicKey);
+
+            const endpoint = clusterApiUrl(WalletAdapterNetwork.Devnet)
+            const network = endpoint;
+            const connection = new Connection(network, "processed");
+            const tokenAmount = parseInt((await connection.getTokenAccountBalance(await getUserTokenBagAddress(provider.wallet.publicKey))).value.amount);
+
+            console.log("tokenAmount", tokenAmount)
+            setTokenAmount(tokenAmount);
+            setPcsAmount(tokenAmount);
+        }
+        run()
+
+    }, [wallet]);
+
     interface MetaData {
         holder: any;
         pcsTokenAmount: any;
         stakeMode: any;
         stakeTime: any;
     }
+
+
 
     return (
         <>
@@ -451,6 +540,13 @@ const Content: FC = () => {
                 {/* <button onClick={withdraw}>Withdraw</button> */}
                 <button onClick={get}>Get</button>
                 <WalletMultiButton />
+            </div>
+            <div className="token">
+                Receiver: <input type="text" value={receiverAddress} className="inputBox"
+                    onChange={(e) => setReceiverAddress(e.target.value)} />
+                Amount: <input type="text" value={tokenAmount} className="inputBox"
+                    onChange={(e) => setTokenAmount(parseInt(e.target.value))} />
+                <button onClick={send}>Send Token</button>
             </div>
             <div className="Info">
                 <span>PCS Token Balance: {pcsAmount}</span>

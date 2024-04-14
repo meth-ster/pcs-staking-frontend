@@ -5,6 +5,14 @@
   align-items: center;
 }
 
+.token {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
 .Info {
   display: flex;
   justify-content: center;
@@ -22,7 +30,8 @@
   margin: 1rem 0 1rem 30%;
 }
 
-.detailView {
+.inputBox {
+  margin: 0 1rem;
 }
 
 .detailView::-webkit-scrollbar {

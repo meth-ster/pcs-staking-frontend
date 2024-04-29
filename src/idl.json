@@ -1,0 +1,313 @@
+{
+  "version": "0.1.0",
+  "name": "pcs_staking",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "returns": null
+    },
+    {
+      "name": "createPcsTokenBag",
+      "accounts": [
+        {
+          "name": "programPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pcsMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "returns": null
+    },
+    {
+      "name": "stake",
+      "accounts": [
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userPcsTokenBagAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "programPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pcsMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "depositor",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "programPcsBagBump",
+          "type": "u8"
+        },
+        {
+          "name": "pcsAmount",
+          "type": "u64"
+        },
+        {
+          "name": "stakeMode",
+          "type": "u64"
+        }
+      ],
+      "returns": null
+    },
+    {
+      "name": "unstake",
+      "accounts": [
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pcsMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "withdrawer",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "programPcsBagBump",
+          "type": "u8"
+        },
+        {
+          "name": "stakeMode",
+          "type": "u64"
+        }
+      ],
+      "returns": null
+    },
+    {
+      "name": "restake",
+      "accounts": [
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "withdrawer",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "stakeMode",
+          "type": "u64"
+        }
+      ],
+      "returns": null
+    },
+    {
+      "name": "deposit",
+      "accounts": [
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userPcsTokenBagAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "programPcsTokenBag",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pcsMint",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "programPcsBagBump",
+          "type": "u8"
+        },
+        {
+          "name": "pcsAmount",
+          "type": "u64"
+        }
+      ],
+      "returns": null
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StakeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "flexibleApr",
+            "type": "i64"
+          },
+          {
+            "name": "blockApr",
+            "type": "i64"
+          },
+          {
+            "name": "stakedCount",
+            "type": "u64"
+          },
+          {
+            "name": "stakedLastAmount",
+            "type": "u64"
+          },
+          {
+            "name": "list",
+            "type": {
+              "vec": {
+                "defined": "StakeItem"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "StakeItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "holder",
+            "type": "publicKey"
+          },
+          {
+            "name": "pcsTokenAmount",
+            "type": "u64"
+          },
+          {
+            "name": "stakeMode",
+            "type": "u64"
+          },
+          {
+            "name": "stakeAmount",
+            "type": "u64"
+          },
+          {
+            "name": "stakeTime",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotEnoughTime",
+      "msg": "not enough time to unstake"
+    },
+    {
+      "code": 6001,
+      "name": "NotExist",
+      "msg": "not match with params"
+    },
+    {
+      "code": 6002,
+      "name": "NoPermission",
+      "msg": "you are not admin"
+    }
+  ],
+  "metadata": {
+    "address": "7ry4KgNYx5sd731MYpZkwH42gRxok5kSE74NXu2M5oEP"
+  }
+}

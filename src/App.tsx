@@ -40,7 +40,7 @@ import idl from "./idl.json";
 
 
 const programAddress = new PublicKey(
-    'Exuhi9zAafbrAgqJJBu9EMbCdqSYPGNYCQ8Bc5WsinRf'
+    '3F9cw8EGeeLiLettkfLV2aa7SzLA4UbHFWbJGfCXWa59'
 );
 
 const pcsAddress = new PublicKey(
